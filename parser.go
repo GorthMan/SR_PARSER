@@ -50,6 +50,7 @@ var ps parseStack
 var iq []string
 var parseNotComplete bool
 var choice string
+var pt parseTree
 
 func parse(parseIn []string) {
 	//Make a new parse stack
@@ -81,10 +82,19 @@ func parse1step() {
 		println("Error in parsing")
 		parseNotComplete = false
 	case "S": //Shift
+		//If the next token is an ID, shift it onto parse tree stack
+		if iq[0] == "id" {
+			pt.parseTreeShift()
+		}
+		//Remove first item from input queue
 		iq = iq[1:]
+		//Shift item onto parse stack
 		shift(nextSym, nextState)
+		//Put item onto parse tree stack
+
 	case "R": //Reduce
-		reduce(nextSym, nextState)
+		LHS := reduce(nextSym, nextState)
+		pt.parseTreeReduce(LHS)
 	}
 	fmt.Printf("Parse Table after parse: %v\n", ps.String())
 }
@@ -153,12 +163,13 @@ func shift(symbol string, state string) {
 	ps.push(pstackItem{symbol, state})
 }
 
-func reduce(symbol string, state string) {
+func reduce(symbol string, state string) string {
 	LHS, r := grammarLookup(state)
 	ps.popNum(r)
 	state = ps.top().stateSym
 	state = goLookup(state, LHS)
 	ps.push(pstackItem{LHS, state})
+	return LHS
 }
 
 //Helper function to convert symbol to its position in the aTable list
