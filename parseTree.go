@@ -26,14 +26,38 @@ type treeStack struct {
 func (tn treeNode) String() string {
 	if tn.children == nil && tn.parent == "" {
 		return tn.termsym
-	} else if tn.children != nil {
-		return "[ " + tn.parent + " " + tn.termsym + " ]"
 	} else {
-		return "[ " + tn.parent + " " + tn.children.queue.Front().Value.(treeNode).String() + " ]"
+		return "[ " + tn.parent + " " + tn.children.String() + " ]"
 	}
 }
 
+//Support functions for treeNodeQueue
+func newTreeNodeQueue() treeNodeQueue {
+	e := treeNodeQueue{}
+	e.queue = list.New()
+	return e
+}
+
+func (tq treeNodeQueue) enqueue(itm treeNode) {
+	tq.queue.PushFront(itm)
+}
+
+func (tq treeNodeQueue) String() string {
+	str := ""
+	for e := tq.queue.Front(); e != nil; e = e.Next() {
+		str += e.Value.(treeNode).String()
+	}
+
+	return str
+}
+
 //Support functions for treeStack
+func newTreeStack() treeStack {
+	e := treeStack{}
+	e.stack = list.New()
+	return e
+}
+
 func (ts treeStack) top() treeNode {
 	e := ts.stack.Front()
 	return e.Value.(treeNode)
@@ -67,17 +91,27 @@ func (ts treeStack) String() string {
 }
 
 //Support functions for parse tree
+func (pt parseTree) String() string {
+	return pt.ts.String()
+}
+
 func (pt parseTree) parseTreeShift() {
 	pt.ts.push(treeNode{"", "id", nil})
 }
 
-func (pt parseTree) parseTreeReduce(LHS string, r int) {
+func (pt parseTree) parseTreeReduce(LHS string, r int, op string) {
+	y := newTreeNodeQueue()
 	if r == 1 {
 		e := pt.ts.pop()
-		x := treeNode{LHS, "", nil}
-		x.children.queue.Front(e)
-		pt.ts.push(treeNode{LHS, "", x})
-	} else {
 
+		y.enqueue(e)
+		pt.ts.push(treeNode{LHS, "", &y})
+	} else {
+		a := pt.ts.pop()
+		b := pt.ts.pop()
+		y.enqueue(a)
+		y.enqueue(treeNode{"", op, nil})
+		y.enqueue(b)
+		pt.ts.push(treeNode{LHS, "", &y})
 	}
 }

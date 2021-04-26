@@ -55,6 +55,7 @@ var pt parseTree
 func parse(parseIn []string) {
 	//Make a new parse stack
 	ps = newParseStack()
+	pt.ts = newTreeStack()
 	ps.push(pstackItem{"", "0"})
 	iq = parseIn
 	parseNotComplete = true
@@ -72,14 +73,13 @@ func parse1step() {
 	nextSym := iq[0]
 	fmt.Printf("Looking up %v %v in actiontable\n", curState, nextSym)
 	choice, nextState = aLookup(curState, nextSym)
-	println(choice)
 
 	switch choice {
 	case "accept":
-		println("Parse complete!")
+		fmt.Printf("Parse complete!\n")
 		parseNotComplete = false
 	case "error":
-		println("Error in parsing")
+		fmt.Printf("Error in parsing")
 		parseNotComplete = false
 	case "S": //Shift
 		//If the next token is an ID, shift it onto parse tree stack
@@ -93,10 +93,11 @@ func parse1step() {
 		//Put item onto parse tree stack
 
 	case "R": //Reduce
-		LHS := reduce(nextSym, nextState)
-		pt.parseTreeReduce(LHS)
+		LHS, r, op := reduce(nextSym, nextState)
+		pt.parseTreeReduce(LHS, r, op)
 	}
 	fmt.Printf("Parse Table after parse: %v\n", ps.String())
+	fmt.Printf("Parse Tree after parse: %v\n", pt.String())
 }
 
 func aLookup(state string, grammarSym string) (string, string) {
@@ -150,26 +151,31 @@ func goLookup(state string, LHS string) string {
 	return mygoto
 }
 
-func grammarLookup(state string) (string, int) {
+func grammarLookup(state string) (string, int, string) {
 	state_pos, err := strconv.ParseInt(state, 10, 64)
 	if err != nil {
 		println("ERROR ENCOUNTERED WHEN CONVERTING STRING TO INT!")
-		return "", -1
+		return "", -1, ""
 	}
-	return grammar[state_pos-1][0], len(grammar[state_pos-1]) - 1
+	if len(grammar[state_pos-1])-1 == 1 {
+		return grammar[state_pos-1][0], len(grammar[state_pos-1]) - 1, ""
+	} else {
+		return grammar[state_pos-1][0], len(grammar[state_pos-1]) - 1, grammar[state_pos-1][2]
+	}
+
 }
 
 func shift(symbol string, state string) {
 	ps.push(pstackItem{symbol, state})
 }
 
-func reduce(symbol string, state string) string {
-	LHS, r := grammarLookup(state)
+func reduce(symbol string, state string) (string, int, string) {
+	LHS, r, op := grammarLookup(state)
 	ps.popNum(r)
 	state = ps.top().stateSym
 	state = goLookup(state, LHS)
 	ps.push(pstackItem{LHS, state})
-	return LHS
+	return LHS, r, op
 }
 
 //Helper function to convert symbol to its position in the aTable list
